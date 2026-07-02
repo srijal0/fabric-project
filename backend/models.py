@@ -6,18 +6,18 @@ import time
 class FabricBase(SQLModel):
     name: str
     sku: str
-    category: str                  # Cotton, Linen, Silk, Wool, Denim, Polyester, Rayon/Viscose, Knit, Blend
-    composition: str = ""          # e.g. "60% cotton, 40% polyester"
+    category: str
+    composition: str = ""
     color_name: str = ""
     color_hex: str = "#cccccc"
-    pattern: str = ""              # weave/pattern e.g. Twill, Solid
+    pattern: str = ""
     weight_gsm: float = 0
     width_cm: float = 0
     price_per_meter: float = 0
     stock_meters: float = 0
     supplier: str = ""
-    season: str = ""               # Summer, Winter, All-season
-    usage: str = ""                # Shirting, dresses, suiting...
+    season: str = ""
+    usage: str = ""
     care: str = ""
     notes: str = ""
 

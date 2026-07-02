@@ -1,5 +1,6 @@
+import os
 from typing import List, Optional
-from fastapi import FastAPI, Depends, HTTPException, Query
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session, select
 
@@ -8,10 +9,12 @@ from models import Fabric, FabricCreate, FabricUpdate
 
 app = FastAPI(title="Selvage — Fabric & Material Catalog API")
 
-# Allow the frontend (any origin, for thesis/demo purposes) to call this API
+cors_origins = os.getenv("CORS_ORIGINS", "*")
+origins = ["*"] if cors_origins.strip() == "*" else [o.strip() for o in cors_origins.split(",")]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )

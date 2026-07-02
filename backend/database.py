@@ -1,7 +1,12 @@
+import os
+from dotenv import load_dotenv
 from sqlmodel import SQLModel, create_engine, Session
 
-DATABASE_URL = "sqlite:///./fabrics.db"
-engine = create_engine(DATABASE_URL, echo=False, connect_args={"check_same_thread": False})
+load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./fabrics.db")
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+engine = create_engine(DATABASE_URL, echo=False, connect_args=connect_args)
 
 
 def init_db():
