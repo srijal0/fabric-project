@@ -1,7 +1,8 @@
 """Run once to populate the database with sample fabrics:  python seed.py"""
-from sqlmodel import Session
+from sqlmodel import Session, select
 from database import engine, init_db
-from models import Fabric
+from models import Fabric, User
+from auth import hash_password
 
 SAMPLE_FABRICS = [
     dict(name="Sea Island Poplin", sku="COT-SIP-101", category="Cotton",
@@ -31,14 +32,30 @@ SAMPLE_FABRICS = [
          usage="Coats, suiting", care="Dry clean recommended."),
 ]
 
+DEFAULT_USERS = [
+    {"username": "admin", "password": "admin123", "role": "admin"},
+    {"username": "staff", "password": "staff123", "role": "staff"},
+]
+
 
 def run():
     init_db()
     with Session(engine) as session:
         for data in SAMPLE_FABRICS:
             session.add(Fabric(**data))
+
+        for u in DEFAULT_USERS:
+            existing = session.exec(select(User).where(User.username == u["username"])).first()
+            if not existing:
+                session.add(User(
+                    username=u["username"],
+                    hashed_password=hash_password(u["password"]),
+                    role=u["role"],
+                ))
+
         session.commit()
-    print(f"Seeded {len(SAMPLE_FABRICS)} fabrics into fabrics.db")
+    print(f"Seeded {len(SAMPLE_FABRICS)} fabrics and {len(DEFAULT_USERS)} users.")
+    print("Login with: admin / admin123  (or)  staff / staff123")
 
 
 if __name__ == "__main__":

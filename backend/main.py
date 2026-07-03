@@ -2,10 +2,12 @@ import os
 from typing import List, Optional
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session, select
 
 from database import init_db, get_session
-from models import Fabric, FabricCreate, FabricUpdate
+from models import Fabric, FabricCreate, FabricUpdate, User
+from auth import authenticate_user, create_access_token, get_current_user
 
 app = FastAPI(title="Selvage — Fabric & Material Catalog API")
 
@@ -23,6 +25,20 @@ app.add_middleware(
 @app.on_event("startup")
 def on_startup():
     init_db()
+
+
+@app.post("/auth/login")
+def login(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_session)):
+    user = authenticate_user(session, form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Incorrect username or password")
+    token = create_access_token(data={"sub": user.username, "role": user.role})
+    return {"access_token": token, "token_type": "bearer", "username": user.username, "role": user.role}
+
+
+@app.get("/auth/me")
+def read_current_user(current_user: User = Depends(get_current_user)):
+    return {"username": current_user.username, "role": current_user.role}
 
 
 @app.get("/fabrics", response_model=List[Fabric])
@@ -59,7 +75,11 @@ def get_fabric(fabric_id: int, session: Session = Depends(get_session)):
 
 
 @app.post("/fabrics", response_model=Fabric)
-def create_fabric(fabric: FabricCreate, session: Session = Depends(get_session)):
+def create_fabric(
+    fabric: FabricCreate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
     db_fabric = Fabric.from_orm(fabric)
     session.add(db_fabric)
     session.commit()
@@ -68,7 +88,12 @@ def create_fabric(fabric: FabricCreate, session: Session = Depends(get_session))
 
 
 @app.patch("/fabrics/{fabric_id}", response_model=Fabric)
-def update_fabric(fabric_id: int, updates: FabricUpdate, session: Session = Depends(get_session)):
+def update_fabric(
+    fabric_id: int,
+    updates: FabricUpdate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
     fabric = session.get(Fabric, fabric_id)
     if not fabric:
         raise HTTPException(status_code=404, detail="Fabric not found")
@@ -81,7 +106,11 @@ def update_fabric(fabric_id: int, updates: FabricUpdate, session: Session = Depe
 
 
 @app.delete("/fabrics/{fabric_id}")
-def delete_fabric(fabric_id: int, session: Session = Depends(get_session)):
+def delete_fabric(
+    fabric_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
     fabric = session.get(Fabric, fabric_id)
     if not fabric:
         raise HTTPException(status_code=404, detail="Fabric not found")

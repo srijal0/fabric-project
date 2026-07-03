@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 load_dotenv()
 
 from sqlmodel import SQLModel
-from models import Fabric  # noqa: F401  (import registers the table with SQLModel metadata)
+from models import Fabric, User  # noqa: F401  (import registers the table with SQLModel metadata)
 
 config = context.config
 

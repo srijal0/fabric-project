@@ -1,8 +1,8 @@
-"""create fabric table
+"""create fabric and user tables
 
-Revision ID: 0dad032985b2
-Revises: 9e99f4c97dce
-Create Date: 2026-07-02 16:25:55.319115
+Revision ID: 64d9abbf34b2
+Revises: 
+Create Date: 2026-07-03 10:37:35.846516
 
 """
 from typing import Sequence, Union
@@ -13,8 +13,8 @@ import sqlmodel
 
 
 # revision identifiers, used by Alembic.
-revision: str = '0dad032985b2'
-down_revision: Union[str, None] = '9e99f4c97dce'
+revision: str = '64d9abbf34b2'
+down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
