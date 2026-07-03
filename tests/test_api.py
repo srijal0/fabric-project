@@ -1,21 +1,35 @@
 """
-Basic tests for the fabric catalog API.
+Tests for the fabric catalog API.
 Run with:  pytest test_api.py   (from inside the tests/ folder, backend on PYTHONPATH)
 
-These use FastAPI's TestClient, so no server needs to be running —
-each test gets a fresh in-memory-style flow against the real app.
+These tests set up their own test user directly — they do NOT depend on
+seed.py having been run first, so they work the same locally and in CI.
 """
 import sys
 import os
 
-# Make the backend package importable
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 
+from sqlmodel import Session, select
 from fastapi.testclient import TestClient
 from main import app
-from database import init_db
+from database import init_db, engine
+from models import User
+from auth import hash_password
 
 init_db()
+
+# Ensure a known test user exists, regardless of whether seed.py has run.
+with Session(engine) as session:
+    existing = session.exec(select(User).where(User.username == "testadmin")).first()
+    if not existing:
+        session.add(User(
+            username="testadmin",
+            hashed_password=hash_password("testpass123"),
+            role="admin",
+        ))
+        session.commit()
+
 client = TestClient(app)
 
 SAMPLE_FABRIC = {
@@ -38,35 +52,55 @@ SAMPLE_FABRIC = {
 }
 
 
+def get_auth_headers():
+    res = client.post("/auth/login", data={"username": "testadmin", "password": "testpass123"})
+    assert res.status_code == 200, f"Login failed: {res.text}"
+    token = res.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
 def test_list_fabrics_returns_200():
     res = client.get("/fabrics")
     assert res.status_code == 200
     assert isinstance(res.json(), list)
 
 
-def test_create_get_update_delete_fabric():
-    # Create
+def test_login_with_correct_credentials_succeeds():
+    res = client.post("/auth/login", data={"username": "testadmin", "password": "testpass123"})
+    assert res.status_code == 200
+    assert "access_token" in res.json()
+
+
+def test_login_with_wrong_password_fails():
+    res = client.post("/auth/login", data={"username": "testadmin", "password": "wrongpassword"})
+    assert res.status_code == 401
+
+
+def test_create_fabric_without_login_is_rejected():
     res = client.post("/fabrics", json=SAMPLE_FABRIC)
+    assert res.status_code == 401
+
+
+def test_create_get_update_delete_fabric_when_logged_in():
+    headers = get_auth_headers()
+
+    res = client.post("/fabrics", json=SAMPLE_FABRIC, headers=headers)
     assert res.status_code == 200
     fabric = res.json()
     fabric_id = fabric["id"]
     assert fabric["name"] == "Test Poplin"
 
-    # Get
     res = client.get(f"/fabrics/{fabric_id}")
     assert res.status_code == 200
     assert res.json()["sku"] == "TST-001"
 
-    # Update
-    res = client.patch(f"/fabrics/{fabric_id}", json={"stock_meters": 5})
+    res = client.patch(f"/fabrics/{fabric_id}", json={"stock_meters": 5}, headers=headers)
     assert res.status_code == 200
     assert res.json()["stock_meters"] == 5
 
-    # Delete
-    res = client.delete(f"/fabrics/{fabric_id}")
+    res = client.delete(f"/fabrics/{fabric_id}", headers=headers)
     assert res.status_code == 200
 
-    # Confirm gone
     res = client.get(f"/fabrics/{fabric_id}")
     assert res.status_code == 404
 
