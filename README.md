@@ -22,10 +22,15 @@ JS framework.
 ## Tech stack
 
 - **Backend:** Python, FastAPI, SQLModel (SQLAlchemy + Pydantic), SQLite
+- **Auth:** JWT-based login (`python-jose` + `passlib`), role-based access
+  control (`admin` / `staff`)
 - **Frontend:** HTML, CSS, vanilla JavaScript (fetch API)
 - **Data model:** see `backend/models.py` — one `Fabric` entity with fields
   for identification (name, SKU, category), physical properties (composition,
-  weight, width, color), and business data (price, stock, supplier, season).
+  weight, width, color, image), and business data (price, stock, supplier,
+  season); one `User` entity for staff accounts with a role field.
+- **Testing:** pytest + FastAPI's `TestClient`, run automatically on every
+  push via GitHub Actions CI (see `.github/workflows/`)
 
 ## Running it locally
 
@@ -43,6 +48,15 @@ Interactive API docs: http://127.0.0.1:8000/docs
 Just open `frontend/fabric-catalog.html` in a browser while the backend is
 running. It talks to `http://127.0.0.1:8000` automatically.
 
+Click **Staff login** in the top right to sign in and unlock add/edit/delete
+actions. Check `backend/seed.py` for the seeded test account credentials.
+
+### 3. Running tests
+```bash
+cd backend      # or repo root — pytest resolves paths via tests/conftest.py
+pytest tests/ -v
+```
+
 ## Features
 
 - Full CRUD for fabrics (create, view, edit, delete)
@@ -50,10 +64,20 @@ running. It talks to `http://127.0.0.1:8000` automatically.
 - Filter by category, sort by name/price/stock/date added
 - Low-stock flagging (below 20m)
 - Live dashboard stats (total fabrics, total stock, categories)
+- **Staff authentication** — JWT-based login required to create or edit
+  fabrics
+- **Role-based permissions** — only `admin`-role accounts can delete
+  fabrics; `staff`-role accounts can view, add, and edit
+- **Fabric photos** — upload a swatch photo per fabric; displayed as a
+  thumbnail in the catalog grid and detail view (falls back to a solid
+  color block from the fabric's hex color when no photo is set)
+- **Automated tests + CI** — API tests covering CRUD, auth, permissions,
+  and image upload run on every push
 
 ## Status / next steps
 
 See `PROGRESS.md` for the development log and `docs/` for architecture notes.
 
-Planned next steps: authentication for staff accounts, image uploads per
-fabric, and a proper deployment (currently local-only).
+Optional future work (not required for current scope): live deployment
+(currently local-only), barcode/QR generation per fabric roll, supplier
+management as its own entity.
