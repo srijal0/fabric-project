@@ -1,8 +1,11 @@
 import os
+import shutil
+import uuid
 from typing import List, Optional
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.staticfiles import StaticFiles
 from sqlmodel import Session, select
 
 from database import init_db, get_session
@@ -20,6 +23,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Directory for uploaded fabric images, served at /uploads/<filename>
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+
+
+def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    """Dependency that only allows users with role == 'admin' through."""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return current_user
 
 
 @app.on_event("startup")
@@ -109,7 +124,7 @@ def update_fabric(
 def delete_fabric(
     fabric_id: int,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ):
     fabric = session.get(Fabric, fabric_id)
     if not fabric:
@@ -117,6 +132,34 @@ def delete_fabric(
     session.delete(fabric)
     session.commit()
     return {"ok": True}
+
+
+@app.post("/fabrics/{fabric_id}/image", response_model=Fabric)
+def upload_fabric_image(
+    fabric_id: int,
+    file: UploadFile = File(...),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    fabric = session.get(Fabric, fabric_id)
+    if not fabric:
+        raise HTTPException(status_code=404, detail="Fabric not found")
+
+    allowed_extensions = {"jpg", "jpeg", "png", "webp", "gif"}
+    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+    if ext not in allowed_extensions:
+        raise HTTPException(status_code=400, detail="Unsupported image type")
+
+    filename = f"{uuid.uuid4()}.{ext}"
+    filepath = os.path.join(UPLOAD_DIR, filename)
+    with open(filepath, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    fabric.image_path = f"/uploads/{filename}"
+    session.add(fabric)
+    session.commit()
+    session.refresh(fabric)
+    return fabric
 
 
 @app.get("/stats")

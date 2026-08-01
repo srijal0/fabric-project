@@ -25,6 +25,7 @@ class FabricBase(SQLModel):
 class Fabric(FabricBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     date_added: float = Field(default_factory=lambda: time.time())
+    image_path: Optional[str] = None
 
 
 class FabricCreate(FabricBase):

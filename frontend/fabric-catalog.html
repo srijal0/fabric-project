@@ -68,6 +68,19 @@ header.top h1{
 .stat .num{font-family:'Fraunces',serif;font-size:26px;font-weight:600;}
 .stat .lbl{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.65;}
 
+.header-right{display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap;}
+
+/* ---- auth area ---- */
+.auth-area{display:flex;align-items:center;gap:10px;}
+.auth-info{display:flex;flex-direction:column;align-items:flex-end;gap:2px;}
+.auth-info .who{font-size:13px;font-weight:600;}
+.role-badge{
+  font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;
+  padding:2px 7px;border-radius:3px;
+}
+.role-badge.admin{background:rgba(168,84,46,0.18);color:var(--rust);}
+.role-badge.staff{background:rgba(59,75,107,0.15);color:var(--indigo);}
+
 /* ---- layout ---- */
 .layout{display:flex;gap:0;align-items:flex-start;}
 aside{
@@ -113,7 +126,7 @@ main{flex:1;padding:24px 32px;}
   flex:1; min-width:220px;
   position:relative;
 }
-input[type=text], input[type=search], select, textarea, input[type=number]{
+input[type=text], input[type=search], select, textarea, input[type=number], input[type=password], input[type=file]{
   font-family:'Inter',sans-serif;
   border:1px solid var(--line);
   background:var(--card);
@@ -140,6 +153,12 @@ select{width:auto;}
 .btn.ghost{background:transparent;color:var(--ink);}
 .btn.ghost:hover{background:var(--bone-2);}
 .btn.danger{background:var(--rust);border-color:var(--rust);}
+.btn.small{padding:6px 12px;font-size:13px;}
+.btn:disabled{opacity:0.5;cursor:not-allowed;}
+
+.form-error{
+  color:var(--rust); font-size:13px; margin-top:8px; font-family:'Inter',sans-serif; display:none;
+}
 
 /* ---- swatch grid ---- */
 .grid{
@@ -170,6 +189,8 @@ select{width:auto;}
   border-radius:4px;
   margin-bottom:12px;
   border:1px solid rgba(0,0,0,0.15);
+  background-size:cover;
+  background-position:center;
 }
 .swatch-card h4{
   margin:0 0 3px; font-family:'Fraunces',serif; font-size:18px; font-weight:600;
@@ -196,17 +217,26 @@ select{width:auto;}
   background:var(--card); border-radius:8px; width:100%; max-width:560px;
   max-height:88vh; overflow-y:auto; padding:26px 28px; border:1px solid var(--line);
 }
+.modal.narrow{max-width:380px;}
 .modal h2{font-family:'Fraunces',serif; margin-top:0;}
 .form-row{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;}
 .form-row.full{grid-template-columns:1fr;}
 label{font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.08em; opacity:0.65; display:block; margin-bottom:4px;}
 .modal-actions{display:flex; justify-content:flex-end; gap:10px; margin-top:18px;}
-.detail-actions{display:flex; gap:10px; margin-top:20px;}
+.detail-actions{display:flex; gap:10px; margin-top:20px; flex-wrap:wrap;}
+
+.image-preview{
+  width:100%; height:120px; border-radius:4px; margin-bottom:10px;
+  background-size:cover; background-position:center; border:1px solid var(--line);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'IBM Plex Mono',monospace; font-size:11px; opacity:0.5;
+}
 
 @media (max-width:760px){
   .layout{flex-direction:column;}
   aside{width:100%; position:static; min-height:auto; border-right:none; border-bottom:1px solid var(--line);}
   .form-row{grid-template-columns:1fr;}
+  .header-right{width:100%;justify-content:space-between;}
 }
 </style>
 </head>
@@ -217,7 +247,10 @@ label{font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppe
     <span class="eyebrow">Textile Inventory Prototype</span>
     <h1 class="display">Selvage — Fabric &amp; Material Catalog</h1>
   </div>
-  <div class="stats-bar" id="statsBar"></div>
+  <div class="header-right">
+    <div class="stats-bar" id="statsBar"></div>
+    <div class="auth-area" id="authArea"></div>
+  </div>
 </header>
 
 <div class="layout">
@@ -253,19 +286,40 @@ label{font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppe
 <script>
 const CATEGORIES = ["Cotton","Linen","Silk","Wool","Denim","Polyester","Rayon/Viscose","Knit","Blend"];
 const LOW_STOCK_THRESHOLD = 20;
+const API_BASE = "http://127.0.0.1:8000";
+const AUTH_STORAGE_KEY = "selvage_auth";
 
 let fabrics = [];
 let activeCategory = "All";
 let searchTerm = "";
 let sortMode = "name";
 
+// ---- auth state ----
+let currentUser = null; // { username, role, token }
+try{
+  const saved = localStorage.getItem(AUTH_STORAGE_KEY);
+  if(saved) currentUser = JSON.parse(saved);
+}catch(e){ currentUser = null; }
+
+function isLoggedIn(){ return !!currentUser; }
+function isAdmin(){ return !!currentUser && currentUser.role === 'admin'; }
+
+function authHeader(){
+  return currentUser ? { 'Authorization': `Bearer ${currentUser.token}` } : {};
+}
+
+function saveAuth(user){
+  currentUser = user;
+  if(user) localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+  else localStorage.removeItem(AUTH_STORAGE_KEY);
+  renderAuthArea();
+}
+
 function skuFor(category, name){
   const catCode = category.slice(0,3).toUpperCase();
   const nameCode = name.replace(/[^A-Za-z]/g,'').slice(0,3).toUpperCase();
   return catCode + '-' + nameCode + '-' + Math.floor(100+Math.random()*900);
 }
-
-const API_BASE = "http://127.0.0.1:8000";
 
 // ---- field mapping: backend uses snake_case, frontend uses camelCase ----
 function fromApi(f){
@@ -287,7 +341,8 @@ function fromApi(f){
     usage: f.usage,
     care: f.care,
     notes: f.notes,
-    dateAdded: (f.date_added || 0) * 1000
+    dateAdded: (f.date_added || 0) * 1000,
+    imagePath: f.image_path || null
   };
 }
 
@@ -331,9 +386,10 @@ async function createFabric(data){
   const payload = toApi({ ...data, sku: skuFor(data.category, data.name) });
   const res = await fetch(`${API_BASE}/fabrics`, {
     method: 'POST',
-    headers: {'Content-Type':'application/json'},
+    headers: {'Content-Type':'application/json', ...authHeader()},
     body: JSON.stringify(payload)
   });
+  if(res.status === 401) throw new Error('AUTH');
   if(!res.ok) throw new Error('Create failed');
   return fromApi(await res.json());
 }
@@ -341,16 +397,39 @@ async function createFabric(data){
 async function updateFabricApi(id, data){
   const res = await fetch(`${API_BASE}/fabrics/${id}`, {
     method: 'PATCH',
-    headers: {'Content-Type':'application/json'},
+    headers: {'Content-Type':'application/json', ...authHeader()},
     body: JSON.stringify(toApi(data))
   });
+  if(res.status === 401) throw new Error('AUTH');
   if(!res.ok) throw new Error('Update failed');
   return fromApi(await res.json());
 }
 
 async function deleteFabricApi(id){
-  const res = await fetch(`${API_BASE}/fabrics/${id}`, { method: 'DELETE' });
+  const res = await fetch(`${API_BASE}/fabrics/${id}`, {
+    method: 'DELETE',
+    headers: { ...authHeader() }
+  });
+  if(res.status === 401) throw new Error('AUTH');
+  if(res.status === 403) throw new Error('FORBIDDEN');
   if(!res.ok) throw new Error('Delete failed');
+}
+
+async function uploadFabricImage(id, file){
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`${API_BASE}/fabrics/${id}/image`, {
+    method: 'POST',
+    headers: { ...authHeader() }, // do NOT set Content-Type manually for FormData
+    body: formData
+  });
+  if(res.status === 401) throw new Error('AUTH');
+  if(!res.ok) throw new Error('Image upload failed');
+  return fromApi(await res.json());
+}
+
+function imageUrl(f){
+  return f.imagePath ? `${API_BASE}${f.imagePath}` : null;
 }
 
 function renderCategories(){
@@ -378,6 +457,23 @@ function renderStats(){
     <div class="stat"><span class="num" style="color:${lowStock? 'var(--rust)':'inherit'}">${lowStock}</span><span class="lbl">Low Stock</span></div>
     <div class="stat"><span class="num">${cats}</span><span class="lbl">Categories</span></div>
   `;
+}
+
+function renderAuthArea(){
+  const area = document.getElementById('authArea');
+  if(!currentUser){
+    area.innerHTML = `<button class="btn ghost small" id="loginBtn">Staff login</button>`;
+    document.getElementById('loginBtn').onclick = openLoginModal;
+  } else {
+    area.innerHTML = `
+      <div class="auth-info">
+        <span class="who">${escapeHtml(currentUser.username)}</span>
+        <span class="role-badge ${currentUser.role}">${currentUser.role}</span>
+      </div>
+      <button class="btn ghost small" id="logoutBtn">Log out</button>
+    `;
+    document.getElementById('logoutBtn').onclick = ()=>{ saveAuth(null); };
+  }
 }
 
 function getFiltered(){
@@ -410,11 +506,12 @@ function renderGrid(){
   empty.style.display = list.length ? 'none' : 'block';
   list.forEach(f=>{
     const low = Number(f.stockMeters) < LOW_STOCK_THRESHOLD;
+    const img = imageUrl(f);
     const card = document.createElement('div');
     card.className = 'swatch-card';
     card.innerHTML = `
       <div class="hole"></div>
-      <div class="swatch-block" style="background:${f.colorHex}"></div>
+      <div class="swatch-block" style="${img ? `background-image:url('${img}')` : `background:${f.colorHex}`}"></div>
       <h4>${escapeHtml(f.name)}</h4>
       <div class="comp">${escapeHtml(f.composition||'')}</div>
       <div class="swatch-meta"><span>${f.sku}</span><span>$${Number(f.pricePerMeter).toFixed(2)}/m</span></div>
@@ -435,13 +532,24 @@ function render(){
   renderCategories();
   renderStats();
   renderGrid();
+  renderAuthArea();
 }
 
 /* ---------- Modals ---------- */
 function closeModal(){ document.getElementById('modalRoot').innerHTML = ''; }
 
 function fieldsForm(f={}){
+  const img = imageUrl(f);
   return `
+    <div class="form-row full">
+      <div>
+        <label>Fabric photo</label>
+        <div class="image-preview" id="imagePreview" style="${img ? `background-image:url('${img}')` : ''}">
+          ${img ? '' : 'No photo yet'}
+        </div>
+        <input type="file" id="f_image" accept="image/png,image/jpeg,image/webp,image/gif">
+      </div>
+    </div>
     <div class="form-row">
       <div><label>Fabric name</label><input type="text" id="f_name" value="${escapeHtml(f.name||'')}"></div>
       <div><label>Category</label>
@@ -502,12 +610,78 @@ function readForm(){
   };
 }
 
+function readSelectedImageFile(){
+  const input = document.getElementById('f_image');
+  return (input && input.files && input.files.length) ? input.files[0] : null;
+}
+
+/* ---------- Login modal ---------- */
+function openLoginModal(){
+  document.getElementById('modalRoot').innerHTML = `
+    <div class="overlay" id="overlay">
+      <div class="modal narrow">
+        <h2>Staff login</h2>
+        <div class="form-row full">
+          <div><label>Username</label><input type="text" id="login_username" autocomplete="username"></div>
+        </div>
+        <div class="form-row full">
+          <div><label>Password</label><input type="password" id="login_password" autocomplete="current-password"></div>
+        </div>
+        <div class="form-error" id="loginError">Incorrect username or password.</div>
+        <div class="modal-actions">
+          <button class="btn ghost" id="cancelBtn">Cancel</button>
+          <button class="btn" id="loginSubmitBtn">Log in</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('cancelBtn').onclick = closeModal;
+  document.getElementById('overlay').onclick = (e)=>{ if(e.target.id==='overlay') closeModal(); };
+  document.getElementById('loginSubmitBtn').onclick = doLogin;
+  document.getElementById('login_password').addEventListener('keydown', (e)=>{ if(e.key==='Enter') doLogin(); });
+}
+
+async function doLogin(){
+  const username = document.getElementById('login_username').value.trim();
+  const password = document.getElementById('login_password').value;
+  const errEl = document.getElementById('loginError');
+  errEl.style.display = 'none';
+
+  try{
+    const body = new URLSearchParams();
+    body.append('username', username);
+    body.append('password', password);
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body
+    });
+    if(!res.ok){
+      errEl.style.display = 'block';
+      return;
+    }
+    const data = await res.json();
+    saveAuth({ username: data.username, role: data.role, token: data.access_token });
+    closeModal();
+  }catch(e){
+    errEl.textContent = "Couldn't reach the backend server.";
+    errEl.style.display = 'block';
+  }
+}
+
+function requireLoginThen(action){
+  if(isLoggedIn()){ action(); return; }
+  openLoginModal();
+}
+
 function openAddModal(){
+  if(!isLoggedIn()){ openLoginModal(); return; }
   document.getElementById('modalRoot').innerHTML = `
     <div class="overlay" id="overlay">
       <div class="modal">
         <h2>Add fabric</h2>
         ${fieldsForm()}
+        <div class="form-error" id="formError">Something went wrong. Check the backend is running and you're logged in.</div>
         <div class="modal-actions">
           <button class="btn ghost" id="cancelBtn">Cancel</button>
           <button class="btn" id="saveBtn">Save fabric</button>
@@ -519,12 +693,22 @@ function openAddModal(){
   document.getElementById('overlay').onclick = (e)=>{ if(e.target.id==='overlay') closeModal(); };
   document.getElementById('saveBtn').onclick = async ()=>{
     const data = readForm();
+    const imageFile = readSelectedImageFile();
     try{
-      await createFabric(data);
+      const created = await createFabric(data);
+      if(imageFile){
+        try{ await uploadFabricImage(created.id, imageFile); }
+        catch(imgErr){ console.error('Image upload failed', imgErr); }
+      }
       await loadFabrics();
       closeModal();
     }catch(e){
-      alert("Couldn't save the fabric — check that the backend server is running.");
+      if(e.message === 'AUTH'){
+        saveAuth(null);
+        openLoginModal();
+      } else {
+        document.getElementById('formError').style.display = 'block';
+      }
     }
   };
 }
@@ -532,10 +716,13 @@ function openAddModal(){
 function openDetail(id){
   const f = fabrics.find(x=>x.id===id);
   if(!f) return;
+  const img = imageUrl(f);
+  const canEdit = isLoggedIn();
+  const canDelete = isAdmin();
   document.getElementById('modalRoot').innerHTML = `
     <div class="overlay" id="overlay">
       <div class="modal">
-        <div class="swatch-block" style="background:${f.colorHex}; height:90px;"></div>
+        <div class="swatch-block" style="height:120px; ${img ? `background-image:url('${img}')` : `background:${f.colorHex}`}"></div>
         <h2>${escapeHtml(f.name)}</h2>
         <div class="mono" style="opacity:0.65; margin-bottom:14px;">${f.sku}</div>
         <div class="form-row">
@@ -562,8 +749,8 @@ function openDetail(id){
         <div class="form-row full"><div><label>Care instructions</label>${escapeHtml(f.care||'—')}</div></div>
         ${f.notes ? `<div class="form-row full"><div><label>Notes</label>${escapeHtml(f.notes)}</div></div>` : ''}
         <div class="detail-actions">
-          <button class="btn ghost" id="editBtn">Edit</button>
-          <button class="btn danger" id="deleteBtn">Delete</button>
+          ${canEdit ? `<button class="btn ghost" id="editBtn">Edit</button>` : `<button class="btn ghost" id="editBtn" title="Log in to edit">Log in to edit</button>`}
+          ${canDelete ? `<button class="btn danger" id="deleteBtn">Delete</button>` : (isLoggedIn() ? '' : `<button class="btn danger" id="deleteBtn" title="Admin only">Log in as admin to delete</button>`)}
           <button class="btn" id="closeBtn" style="margin-left:auto;">Close</button>
         </div>
       </div>
@@ -571,17 +758,28 @@ function openDetail(id){
   `;
   document.getElementById('overlay').onclick = (e)=>{ if(e.target.id==='overlay') closeModal(); };
   document.getElementById('closeBtn').onclick = closeModal;
-  document.getElementById('deleteBtn').onclick = async ()=>{
-    if(!confirm(`Delete "${f.name}"? This can't be undone.`)) return;
-    try{
-      await deleteFabricApi(id);
-      await loadFabrics();
-      closeModal();
-    }catch(e){
-      alert("Couldn't delete the fabric — check that the backend server is running.");
-    }
+
+  document.getElementById('editBtn').onclick = ()=>{
+    requireLoginThen(()=>openEditModal(id));
   };
-  document.getElementById('editBtn').onclick = ()=>openEditModal(id);
+
+  const deleteBtnEl = document.getElementById('deleteBtn');
+  if(deleteBtnEl){
+    deleteBtnEl.onclick = async ()=>{
+      if(!isLoggedIn()){ openLoginModal(); return; }
+      if(!isAdmin()){ alert("Only an admin account can delete fabrics."); return; }
+      if(!confirm(`Delete "${f.name}"? This can't be undone.`)) return;
+      try{
+        await deleteFabricApi(id);
+        await loadFabrics();
+        closeModal();
+      }catch(e){
+        if(e.message === 'AUTH'){ saveAuth(null); openLoginModal(); }
+        else if(e.message === 'FORBIDDEN'){ alert("Only an admin account can delete fabrics."); }
+        else { alert("Couldn't delete the fabric — check that the backend server is running."); }
+      }
+    };
+  }
 }
 
 function openEditModal(id){
@@ -591,6 +789,7 @@ function openEditModal(id){
       <div class="modal">
         <h2>Edit fabric</h2>
         ${fieldsForm(f)}
+        <div class="form-error" id="formError">Something went wrong. Check the backend is running and you're logged in.</div>
         <div class="modal-actions">
           <button class="btn ghost" id="cancelBtn">Cancel</button>
           <button class="btn" id="saveBtn">Save changes</button>
@@ -602,12 +801,22 @@ function openEditModal(id){
   document.getElementById('overlay').onclick = (e)=>{ if(e.target.id==='overlay') closeModal(); };
   document.getElementById('saveBtn').onclick = async ()=>{
     const data = readForm();
+    const imageFile = readSelectedImageFile();
     try{
       await updateFabricApi(id, { ...data, sku: f.sku });
+      if(imageFile){
+        try{ await uploadFabricImage(id, imageFile); }
+        catch(imgErr){ console.error('Image upload failed', imgErr); }
+      }
       await loadFabrics();
       closeModal();
     }catch(e){
-      alert("Couldn't save changes — check that the backend server is running.");
+      if(e.message === 'AUTH'){
+        saveAuth(null);
+        openLoginModal();
+      } else {
+        document.getElementById('formError').style.display = 'block';
+      }
     }
   };
 }
