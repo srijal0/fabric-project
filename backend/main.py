@@ -1,11 +1,14 @@
 import os
 import shutil
 import uuid
+import io
+import qrcode
 from typing import List, Optional
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import StreamingResponse
 from sqlmodel import Session, select
 
 from database import init_db, get_session
@@ -160,6 +163,27 @@ def upload_fabric_image(
     session.commit()
     session.refresh(fabric)
     return fabric
+
+
+@app.get("/fabrics/{fabric_id}/qrcode")
+def get_fabric_qrcode(fabric_id: int, session: Session = Depends(get_session)):
+    fabric = session.get(Fabric, fabric_id)
+    if not fabric:
+        raise HTTPException(status_code=404, detail="Fabric not found")
+
+    qr_text = (
+        f"Selvage Fabric Catalog\n"
+        f"Name: {fabric.name}\n"
+        f"SKU: {fabric.sku}\n"
+        f"Category: {fabric.category}\n"
+        f"Composition: {fabric.composition}\n"
+        f"Supplier: {fabric.supplier}"
+    )
+    img = qrcode.make(qr_text)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return StreamingResponse(buf, media_type="image/png")
 
 
 @app.get("/stats")

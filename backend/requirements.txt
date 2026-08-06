@@ -6,3 +6,4 @@ alembic
 passlib
 python-jose[cryptography]
 python-multipart
+qrcode[pil]
