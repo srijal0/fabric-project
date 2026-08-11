@@ -12,7 +12,7 @@ from fastapi.responses import StreamingResponse
 from sqlmodel import Session, select
 
 from database import init_db, get_session
-from models import Fabric, FabricCreate, FabricUpdate, User
+from models import Fabric, FabricCreate, FabricUpdate, User, Supplier, SupplierCreate, SupplierUpdate
 from auth import authenticate_user, create_access_token, get_current_user
 
 app = FastAPI(title="Selvage — Fabric & Material Catalog API")
@@ -184,6 +184,70 @@ def get_fabric_qrcode(fabric_id: int, session: Session = Depends(get_session)):
     img.save(buf, format="PNG")
     buf.seek(0)
     return StreamingResponse(buf, media_type="image/png")
+
+
+@app.get("/suppliers", response_model=List[Supplier])
+def list_suppliers(session: Session = Depends(get_session)):
+    return session.exec(select(Supplier)).all()
+
+
+@app.get("/suppliers/{supplier_id}", response_model=Supplier)
+def get_supplier(supplier_id: int, session: Session = Depends(get_session)):
+    supplier = session.get(Supplier, supplier_id)
+    if not supplier:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    return supplier
+
+
+@app.post("/suppliers", response_model=Supplier)
+def create_supplier(
+    supplier: SupplierCreate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    db_supplier = Supplier.from_orm(supplier)
+    session.add(db_supplier)
+    session.commit()
+    session.refresh(db_supplier)
+    return db_supplier
+
+
+@app.patch("/suppliers/{supplier_id}", response_model=Supplier)
+def update_supplier(
+    supplier_id: int,
+    updates: SupplierUpdate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    supplier = session.get(Supplier, supplier_id)
+    if not supplier:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    for key, value in updates.dict(exclude_unset=True).items():
+        setattr(supplier, key, value)
+    session.add(supplier)
+    session.commit()
+    session.refresh(supplier)
+    return supplier
+
+
+@app.delete("/suppliers/{supplier_id}")
+def delete_supplier(
+    supplier_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_admin),
+):
+    supplier = session.get(Supplier, supplier_id)
+    if not supplier:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    # Unlink any fabrics pointing at this supplier before deleting it,
+    # so deleting a supplier never silently breaks a fabric record.
+    linked_fabrics = session.exec(select(Fabric).where(Fabric.supplier_id == supplier_id)).all()
+    for f in linked_fabrics:
+        f.supplier_id = None
+        session.add(f)
+    session.delete(supplier)
+    session.commit()
+    return {"ok": True}
 
 
 @app.get("/stats")

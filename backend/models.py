@@ -3,6 +3,29 @@ from sqlmodel import SQLModel, Field
 import time
 
 
+class SupplierBase(SQLModel):
+    name: str
+    contact_email: str = ""
+    phone: str = ""
+    notes: str = ""
+
+
+class Supplier(SupplierBase, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    date_added: float = Field(default_factory=lambda: time.time())
+
+
+class SupplierCreate(SupplierBase):
+    pass
+
+
+class SupplierUpdate(SQLModel):
+    name: Optional[str] = None
+    contact_email: Optional[str] = None
+    phone: Optional[str] = None
+    notes: Optional[str] = None
+
+
 class FabricBase(SQLModel):
     name: str
     sku: str
@@ -16,6 +39,7 @@ class FabricBase(SQLModel):
     price_per_meter: float = 0
     stock_meters: float = 0
     supplier: str = ""
+    supplier_id: Optional[int] = Field(default=None, foreign_key="supplier.id")
     season: str = ""
     usage: str = ""
     care: str = ""
@@ -44,6 +68,7 @@ class FabricUpdate(SQLModel):
     price_per_meter: Optional[float] = None
     stock_meters: Optional[float] = None
     supplier: Optional[str] = None
+    supplier_id: Optional[int] = None
     season: Optional[str] = None
     usage: Optional[str] = None
     care: Optional[str] = None
