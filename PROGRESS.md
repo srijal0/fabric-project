@@ -3,7 +3,7 @@
 Keep this updated as you go — it's useful evidence of process for your thesis
 defense, and helps you remember what you did and why.
 
-## Initial prototype
+# Initial prototype
 - Built HTML/JS frontend with mock/local data to validate the UI and data
   model concept.
 - Set up FastAPI + SQLModel + SQLite backend.
@@ -15,7 +15,7 @@ defense, and helps you remember what you did and why.
   schema changes can be applied without losing existing data.
 - Added CI test workflow (GitHub Actions) and architecture/ER documentation.
 
-## Connected frontend to backend
+# Connected frontend to backend
 - Replaced local browser storage with real fetch() calls to the API.
 - Verified full create/edit/delete loop works end-to-end through the UI.
 - Added staff authentication (JWT-based) — login required to create, edit,
@@ -23,7 +23,7 @@ defense, and helps you remember what you did and why.
 - Reworked tests to create their own test user directly, independent of
   seed.py, so the test suite works the same locally and in CI.
 
-## Image upload, role-based permissions, and hardened testing
+# Image upload, role-based permissions, and hardened testing
 - Added an `image_path` field to the Fabric model and a
   `POST /fabrics/{id}/image` endpoint for uploading a swatch photo per
   fabric (served as static files under `/uploads`).
@@ -52,3 +52,32 @@ defense, and helps you remember what you did and why.
   thesis defense demo).
 - Barcode/QR generation per fabric roll.
 - Supplier management as its own entity.
+
+# QR codes, supplier management, and a second schema lesson applied
+- Added a `/fabrics/{id}/qrcode` endpoint generating a scannable QR code
+  (name, SKU, category, composition, supplier) on demand, downloadable from
+  the frontend for printing and attaching to a physical roll.
+- Added a `Supplier` entity (name, contact email, phone) and a `supplier_id`
+  foreign key on `Fabric`, replacing the plain-text supplier field with a
+  dropdown backed by real records, while keeping the old text field intact
+  for backward compatibility.
+- Added a "Manage Suppliers" screen on the frontend (add/list/delete),
+  matching the same auth rules as fabrics (login to add, admin to delete).
+- Deleting a supplier unlinks any fabrics pointing at it instead of leaving
+  them broken.
+- This schema change (a new column on the existing `fabric` table) hit the
+  same category of problem as the image_path issue in July — but this time
+  used Alembic migrations properly instead of deleting the local database.
+  Found and fixed a real bug in the process: `alembic/env.py` only imported
+  some of the project's models, so new tables/columns were invisible to
+  Alembic's autogenerate comparison, producing empty migrations. Fixing the
+  import list resolved it, and the migration applied cleanly without losing
+  existing data.
+- Wrote 11 new tests (supplier CRUD, QR generation, and a test specifically
+  confirming deleting a supplier unlinks fabrics rather than breaking them).
+  Full suite: 26 tests passing, CI green.
+- Updated README and this log to reflect the finished feature set.
+
+## Next
+- Final regression check on the live deployment before submission.
+- Exam, presentation, and viva prep — due August 16, 2026.
