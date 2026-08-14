@@ -1,5 +1,1 @@
-# Exclude the frontend demo UI from GitHub's language statistics,
-# so the repo's language breakdown reflects the backend (Python)
-# work rather than being dominated by one large HTML/JS file.
-frontend/fabric-catalog.html linguist-vendored
 docs/* linguist-documentation
