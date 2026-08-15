@@ -52,3 +52,21 @@ authentication, since staff actions needed to be meaningfully restricted:
 If you notice a security concern in this codebase (e.g. a dependency with
 a known vulnerability, or unsafe handling of user input), please open an
 issue on the GitHub repository describing the concern.
+
+## Security Checklist
+
+The following security considerations are included in the current
+implementation:
+
+- [x] JWT-based authentication for protected operations
+- [x] Passwords are stored using password hashing rather than plain text
+- [x] Role-based authorization for administrative operations
+- [x] Authentication required for create, update, and delete operations
+- [x] Environment variables used for secrets and credentials
+- [x] Database schema managed through Alembic migrations
+- [x] Automated tests cover authentication and role-based permissions
+- [x] Uploaded files are handled through a dedicated upload endpoint
+- [x] Security limitations of the academic deployment are documented
+- [ ] API rate limiting for production deployment
+- [ ] Persistent production database and file storage
+- [ ] Restricted CORS origins for production deployment
