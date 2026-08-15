@@ -81,3 +81,13 @@ defense, and helps you remember what you did and why.
 ## Next
 - Final regression check on the live deployment before submission.
 - Exam, presentation, and viva prep — due August 16, 2026.
+
+## Current Status
+
+- Core catalog, authentication, role-based permissions, image upload,
+  supplier management, QR generation, and analytics features are implemented.
+- Backend tests are passing and the project includes automated CI testing.
+- Documentation has been updated to reflect the current project structure
+  and implemented features.
+- The remaining work is focused on final regression checking and thesis
+  presentation preparation.
