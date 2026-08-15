@@ -3,6 +3,11 @@
 All notable changes to this project are documented in this file.
 
 ## [Unreleased]
+### Documentation
+
+- Added clearer project structure and documentation references to help
+  contributors navigate the backend, frontend, tests, and documentation
+  directories.
 
 
 ### Added
