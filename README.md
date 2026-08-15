@@ -10,7 +10,7 @@ one place instead of spreadsheets or physical swatch books.
 
 ## Architecture
 
-```
+
 frontend/   -> Static HTML/JS catalog UI (calls the backend over REST)
 backend/    -> Python FastAPI REST API + SQLite database + Alembic migrations
 tests/      -> Automated tests for the backend API
@@ -20,6 +20,18 @@ docs/       -> Diagrams, notes, thesis write-up material
 The frontend and backend are separate, talking over HTTP — the same pattern
 used in most modern web apps, just simpler since this project doesn't need a
 JS framework.
+## Project Structure
+
+fabric-project/
+├── backend/          # FastAPI backend and database
+├── frontend/         # HTML, CSS and JavaScript interface
+├── tests/            # Automated backend tests
+├── docs/             # Architecture and project documentation
+├── .github/          # GitHub Actions workflows
+├── README.md         # Project overview and setup guide
+├── CHANGELOG.md      # Record of project changes
+├── CONTRIBUTING.md   # Contribution guidelines
+└── SECURITY.md       # Security information and reporting
 
 ## Tech stack
 
