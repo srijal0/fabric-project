@@ -14,7 +14,7 @@ records the working conventions used throughout development.
 ## Setup
 
 See `README.md` for full setup instructions (running the backend and
-frontend locally, applying migrations, running tests).
+frontend locally, applying migrations, and running tests).
 
 ## Commit conventions
 
@@ -45,3 +45,10 @@ All sample data in this project (seeded via `backend/seed.py`) is
 synthetic and created solely for demonstration and testing purposes. No
 real supplier, customer, or business data is used anywhere in this
 project.
+
+## Testing guidelines
+
+Run the automated test suite from the project root before committing changes:
+
+```bash
+pytest tests/ -v
