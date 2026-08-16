@@ -3,18 +3,31 @@
 All notable changes to this project are documented in this file.
 
 ## [Unreleased]
+
 ### Documentation
 
 - Added clearer project structure and documentation references to help
   contributors navigate the backend, frontend, tests, and documentation
   directories.
-
+- Added API documentation.
+- Added deployment documentation.
+- Added testing documentation.
+- Added security testing documentation.
+- Added database documentation.
+- Added code quality guidelines.
+- Added versioning guide.
+- Added environment configuration documentation.
+- Added project requirements documentation.
+- Added GitHub issue and pull request templates.
+- Added contribution checklist and CI guide.
 
 ### Added
+
 - Supplier entity (name, contact email, phone) with full CRUD endpoints.
 - `supplier_id` foreign key on Fabric, linking fabrics to a saved supplier
   via a frontend dropdown, while keeping the original free-text supplier
   field for backward compatibility.
+
 - QR code generation endpoint (`/fabrics/{id}/qrcode`), encoding a fabric's
   name, SKU, category, composition, and supplier as a scannable, downloadable
   PNG.
@@ -26,14 +39,15 @@ All notable changes to this project are documented in this file.
   already-loaded data.
 
 ### Fixed
+
 - `alembic/env.py` was only importing some of the project's models, so
   new tables and columns were invisible to Alembic's migration
   autogeneration, producing empty migrations. Corrected the import list
   and applied the supplier schema change as a proper migration instead of
   recreating the local database.
 
-
 ### Added
+
 - Fabric image upload (`POST /fabrics/{id}/image`), served as static files
   and shown as thumbnails in the catalog grid and detail view.
 - Role-based access control: `admin` vs `staff` accounts, with fabric
@@ -43,6 +57,7 @@ All notable changes to this project are documented in this file.
   deployed API.
 
 ### Fixed
+
 - A schema change (adding `image_path` to the Fabric model) broke CI with
   a "no such column" error, caused by a stale, already-committed SQLite
   test database. `create_all()` only creates missing tables, it does not
@@ -51,15 +66,15 @@ All notable changes to this project are documented in this file.
 - Removed already-tracked build artifacts, stale database files, and
   uploaded images from version control; added a proper `.gitignore`.
 
-
 ### Added
+
 - JWT-based staff authentication (`/auth/login`, `/auth/me`).
 - Login required to create, edit, or delete fabric records.
 - Reworked tests to create their own test user directly, independent of
   `seed.py`, so the suite behaves the same locally and in CI.
 
-
 ### Added
+
 - Initial FastAPI + SQLModel + SQLite backend with full CRUD for fabric
   records (name, SKU, category, composition, weight, width, color,
   price, stock, supplier, season, usage, care, notes).
