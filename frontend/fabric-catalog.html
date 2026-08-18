@@ -236,6 +236,16 @@ label{font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppe
   font-family:'IBM Plex Mono',monospace; font-size:11px; opacity:0.5;
 }
 
+/* ---- ML similarity recommendations ---- */
+.similar-results{display:flex;flex-direction:column;gap:10px;margin-top:14px;}
+.similar-card{border:1px solid var(--line);background:var(--bone);border-radius:6px;padding:12px;}
+.similar-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;}
+.similar-name{font-family:'Fraunces',serif;font-size:16px;font-weight:600;}
+.similar-meta{font-size:12px;opacity:.7;margin-top:3px;}
+.similarity-score{font-family:'IBM Plex Mono',monospace;font-size:11px;background:rgba(59,75,107,.12);color:var(--indigo);padding:4px 7px;border-radius:4px;white-space:nowrap;}
+.similar-bar{height:6px;background:var(--bone-2);border-radius:10px;overflow:hidden;margin-top:9px;}
+.similar-bar span{display:block;height:100%;background:var(--indigo);border-radius:10px;}
+.ml-note{font-size:12px;opacity:.7;line-height:1.5;margin:0 0 12px;}
 @media (max-width:760px){
   .layout{flex-direction:column;}
   aside{width:100%; position:static; min-height:auto; border-right:none; border-bottom:1px solid var(--line);}
@@ -449,6 +459,78 @@ async function uploadFabricImage(id, file){
 
 function imageUrl(f){
   return f.imagePath ? `${API_BASE}${f.imagePath}` : null;
+}
+
+async function getSimilarFabrics(id){
+  const res = await fetch(`${API_BASE}/fabrics/${id}/similar`);
+  if(res.status === 404) throw new Error('NOT_FOUND');
+  if(!res.ok){
+    let detail = '';
+    try{ const body = await res.json(); detail = body.detail || ''; }catch(e){}
+    throw new Error(detail || `Similarity request failed (${res.status})`);
+  }
+  return await res.json();
+}
+
+function openSimilarFabricsModal(f){
+  document.getElementById('modalRoot').innerHTML = `
+    <div class="overlay" id="overlay">
+      <div class="modal wide">
+        <h2>Similar fabrics</h2>
+        <p class="ml-note">ML compares the selected fabric with the catalog and returns semantically similar materials using the backend similarity model.</p>
+        <div class="mono" style="opacity:.65;margin-bottom:8px;">Selected: ${escapeHtml(f.name)} · ${escapeHtml(f.sku)}</div>
+        <div id="similarLoading" style="padding:20px 0;opacity:.65;">Finding similar fabrics…</div>
+        <div id="similarResults" class="similar-results" style="display:none;"></div>
+        <div class="form-error" id="similarError"></div>
+        <div class="modal-actions">
+          <button class="btn" id="closeSimilarBtn">Close</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('overlay').onclick = (e)=>{ if(e.target.id==='overlay') closeModal(); };
+  document.getElementById('closeSimilarBtn').onclick = closeModal;
+
+  getSimilarFabrics(f.id).then(data=>{
+    const loading = document.getElementById('similarLoading');
+    const results = document.getElementById('similarResults');
+    const error = document.getElementById('similarError');
+    if(!loading || !results) return;
+    loading.style.display='none';
+    const recommendations = Array.isArray(data.recommendations) ? data.recommendations : [];
+    if(!recommendations.length){
+      results.style.display='block';
+      results.innerHTML='<p style="opacity:.65;">No similar fabrics were found. Add more fabric records to improve recommendations.</p>';
+      return;
+    }
+    results.style.display='flex';
+    results.innerHTML = recommendations.map(item=>{
+      const score = Math.max(0, Math.min(1, Number(item.similarity_score)||0));
+      const percent = (score*100).toFixed(1);
+      return `
+        <div class="similar-card">
+          <div class="similar-top">
+            <div>
+              <div class="similar-name">${escapeHtml(item.name || 'Unnamed fabric')}</div>
+              <div class="similar-meta">${escapeHtml(item.sku || '—')} · ${escapeHtml(item.category || '—')} · ${escapeHtml(item.composition || '—')}</div>
+            </div>
+            <span class="similarity-score">${score.toFixed(4)}</span>
+          </div>
+          <div class="similar-bar"><span style="width:${percent}%"></span></div>
+          <div class="similar-meta" style="margin-top:6px;">Similarity: ${percent}%</div>
+        </div>
+      `;
+    }).join('');
+  }).catch(err=>{
+    const loading = document.getElementById('similarLoading');
+    const error = document.getElementById('similarError');
+    if(loading) loading.style.display='none';
+    if(error){
+      error.textContent = err.message || 'Could not load similar fabrics.';
+      error.style.display='block';
+    }
+  });
 }
 
 function renderCategories(){
@@ -1013,6 +1095,7 @@ function openDetail(id){
         <div class="form-row full"><div><label>Care instructions</label>${escapeHtml(f.care||'—')}</div></div>
         ${f.notes ? `<div class="form-row full"><div><label>Notes</label>${escapeHtml(f.notes)}</div></div>` : ''}
         <div class="detail-actions">
+          <button class="btn" id="similarBtn">✦ Find Similar Fabrics</button>
           <button class="btn ghost" id="qrBtn">View QR Code</button>
           ${canEdit ? `<button class="btn ghost" id="editBtn">Edit</button>` : `<button class="btn ghost" id="editBtn" title="Log in to edit">Log in to edit</button>`}
           ${canDelete ? `<button class="btn danger" id="deleteBtn">Delete</button>` : (isLoggedIn() ? '' : `<button class="btn danger" id="deleteBtn" title="Admin only">Log in as admin to delete</button>`)}
@@ -1025,6 +1108,7 @@ function openDetail(id){
   document.getElementById('closeBtn').onclick = closeModal;
 
   document.getElementById('qrBtn').onclick = ()=>openQrModal(f);
+  document.getElementById('similarBtn').onclick = ()=>openSimilarFabricsModal(f);
 
   document.getElementById('editBtn').onclick = ()=>{
     requireLoginThen(()=>openEditModal(id));
