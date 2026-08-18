@@ -1,12 +1,15 @@
 # Selvage — Fabric & Material Cataloging System
 
-A web-based inventory, cataloging, and intelligent fabric recommendation system for clothing store fabrics and materials, built as a thesis project. Selvage allows store staff to add, search, filter, manage, and track fabric stock, including composition, GSM, price, supplier, colour, season, and stock levels, in one place instead of relying on spreadsheets or physical swatch books.
+**Undergraduate Thesis Project**
 
-The system also includes a **Machine Learning-based fabric similarity and recommendation feature** that analyses fabric information and recommends other fabrics with similar characteristics.
+> Design and Development of a Web-Based Fabric and Material Cataloging System for Efficient Fabric Inventory Management, Search, Stock Tracking, Supplier Management, QR-Based Identification, and Machine Learning-Based Fabric Similarity Recommendations.
+
+A web-based inventory and cataloging system for clothing store fabrics and materials, built as an undergraduate thesis project. Selvage allows store staff to add, search, filter, manage, and track fabric information such as composition, GSM, price, supplier, colour, stock levels, and usage in one centralized system instead of relying on spreadsheets or physical swatch books.
 
 **Live deployment:** https://fabric-project-08hi.onrender.com/docs
 
-> Free-tier hosting — see Deployment notes below.
+(free-tier hosting — see Deployment notes below)
+
 
 ## Architecture
 
