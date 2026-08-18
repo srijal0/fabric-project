@@ -1,121 +1,435 @@
 # Selvage — Fabric & Material Cataloging System
 
-A web-based inventory and cataloging system for clothing store fabrics and
-materials, built as a thesis project. Store staff can add, search, filter,
-and track fabric stock (composition, GSM, price, supplier, stock levels) in
-one place instead of spreadsheets or physical swatch books.
+A web-based inventory, cataloging, and intelligent fabric recommendation system for clothing store fabrics and materials, built as a thesis project. Selvage allows store staff to add, search, filter, manage, and track fabric stock, including composition, GSM, price, supplier, colour, season, and stock levels, in one place instead of relying on spreadsheets or physical swatch books.
+
+The system also includes a **Machine Learning-based fabric similarity and recommendation feature** that analyses fabric information and recommends other fabrics with similar characteristics.
 
 **Live deployment:** https://fabric-project-08hi.onrender.com/docs
-(free-tier hosting — see Deployment notes below)
+
+> Free-tier hosting — see Deployment notes below.
 
 ## Architecture
 
-
-frontend/   -> Static HTML/JS catalog UI (calls the backend over REST)
+```text
+frontend/   -> Static HTML/CSS/JavaScript catalog UI
 backend/    -> Python FastAPI REST API + SQLite database + Alembic migrations
-tests/      -> Automated tests for the backend API
-docs/       -> Diagrams, notes, thesis write-up material
+backend/ml/ -> Machine Learning fabric similarity and recommendation module
+tests/      -> Automated backend API tests
+docs/       -> Diagrams, notes, and thesis documentation material
 ```
 
-The frontend and backend are separate, talking over HTTP — the same pattern
-used in most modern web apps, just simpler since this project doesn't need a
-JS framework.
+The frontend and backend are separate applications that communicate over HTTP through REST API endpoints. The backend manages authentication, fabric and supplier data, image uploads, QR code generation, analytics, and machine learning recommendations.
+
+The ML component is integrated into the backend and uses existing fabric catalogue information to generate similarity-based recommendations.
+
 ## Project Structure
 
+```text
 fabric-project/
-├── backend/          # FastAPI backend and database
-├── frontend/         # HTML, CSS and JavaScript interface
-├── tests/            # Automated backend tests
-├── docs/             # Architecture and project documentation
-├── .github/          # GitHub Actions workflows
-├── README.md         # Project overview and setup guide
-├── CHANGELOG.md      # Record of project changes
-├── CONTRIBUTING.md   # Contribution guidelines
-└── SECURITY.md       # Security information and reporting
+├── backend/
+│   ├── ml/                    # Machine Learning similarity module
+│   │   ├── __init__.py
+│   │   └── fabric_similarity.py
+│   ├── main.py                # FastAPI application and API endpoints
+│   ├── models.py              # Database models
+│   ├── database.py             # Database configuration
+│   ├── auth.py                 # Authentication and authorization
+│   ├── requirements.txt        # Python dependencies
+│   └── ...
+├── frontend/
+│   ├── js/
+│   │   └── ml.js              # Frontend ML recommendation logic
+│   ├── fabric-catalog.html     # Main catalog interface
+│   ├── app.js                  # Main frontend functionality
+│   └── styles.css              # Application styling
+├── tests/                      # Automated backend tests
+├── docs/                       # Architecture and project documentation
+├── .github/                    # GitHub Actions workflows
+├── README.md                   # Project overview and setup guide
+├── CHANGELOG.md                # Record of project changes
+├── CONTRIBUTING.md             # Contribution guidelines
+└── SECURITY.md                 # Security information and reporting
+```
 
-## Tech stack
+## Tech Stack
 
-- **Backend:** Python, FastAPI, SQLModel (SQLAlchemy + Pydantic), SQLite
-- **Migrations:** Alembic, for schema changes without losing existing data
-- **Auth:** JWT-based login (`python-jose` + `passlib`), role-based access
-  control (`admin` / `staff`)
-- **Frontend:** HTML, CSS, vanilla JavaScript (fetch API)
-- **QR codes:** `qrcode[pil]`, generated on demand per fabric
-- **Data model:** see `backend/models.py` — a `Fabric` entity with fields for
-  identification (name, SKU, category), physical properties (composition,
-  weight, width, color, image), and business data (price, stock, season);
-  a `Supplier` entity (name, contact email, phone) linked to fabrics via
-  `supplier_id`; a `User` entity for staff accounts with a role field.
-- **Testing:** pytest + FastAPI's `TestClient`, 26 tests, run automatically
-  on every push via GitHub Actions CI (see `.github/workflows/`)
-- **Deployment:** backend on Render (free tier), auto-deploys from `main`
+### Backend
 
-## Running it locally
+* **Python**
+* **FastAPI** — REST API framework
+* **SQLModel** — database models and data validation
+* **SQLite** — relational database
+* **Alembic** — database migrations
+* **python-jose** — JWT authentication
+* **Passlib** — password hashing
+* **qrcode[pil]** — QR code generation
+
+### Frontend
+
+* **HTML5**
+* **CSS3**
+* **Vanilla JavaScript**
+* **Fetch API** for communication with the FastAPI backend
+
+### Machine Learning
+
+* **Sentence Transformers** — used to generate semantic embeddings from fabric information
+* **all-MiniLM-L6-v2** — pretrained Sentence Transformer model used for fabric similarity
+* **Scikit-learn** — used for similarity calculations
+* Fabric attributes are combined into a descriptive representation before being processed by the ML model.
+* The generated embeddings are compared against other fabrics to identify semantically similar materials.
+
+### Data Model
+
+The main data entities are:
+
+* **Fabric** — stores fabric identification, SKU, category, composition, physical properties, colour, pattern, weight, width, price, stock, season, usage, care information, supplier, and image.
+* **Supplier** — stores supplier name, contact email, phone, and notes.
+* **User** — stores staff/admin accounts and role information.
+
+### Testing and CI
+
+* **pytest**
+* **FastAPI TestClient**
+* Automated GitHub Actions CI
+* Tests cover CRUD operations, authentication, permissions, image upload, supplier management, and QR generation.
+
+### Deployment
+
+* Backend deployed on **Render**
+* Deployment is connected to the `main` branch
+* GitHub Actions is used for automated validation
+
+## Machine Learning Fabric Recommendation
+
+Selvage includes a Machine Learning-based fabric similarity feature to provide intelligent recommendations from the existing fabric catalogue.
+
+### How it works
+
+When a user selects a fabric, the system collects relevant information such as:
+
+* Fabric name
+* Category
+* Composition
+* Colour
+* Pattern
+* Weight/GSM
+* Width
+* Season
+* Usage
+* Care instructions
+
+These attributes are combined into a text representation of the fabric.
+
+The **all-MiniLM-L6-v2** Sentence Transformer model converts the fabric description into a numerical embedding. The system then compares the selected fabric's embedding with the embeddings of other fabrics.
+
+A similarity score is calculated for each comparison, and the system returns the most similar fabrics as recommendations.
+
+### Example
+
+For a selected fabric such as **Sea Island Poplin**, the system can return recommendations such as:
+
+```json
+{
+  "fabric_id": 1,
+  "fabric_name": "Sea Island Poplin",
+  "recommendations": [
+    {
+      "id": 2,
+      "name": "Vintage Rinse Denim",
+      "sku": "DEN-VRD-204",
+      "category": "Denim",
+      "composition": "98% cotton, 2% elastane",
+      "similarity_score": 0.4688
+    },
+    {
+      "id": 5,
+      "name": "Merino Flannel",
+      "sku": "WOO-MER-582",
+      "category": "Wool",
+      "composition": "100% merino wool",
+      "similarity_score": 0.4545
+    },
+    {
+      "id": 4,
+      "name": "Mulberry Charmeuse",
+      "sku": "SIL-MUL-450",
+      "category": "Silk",
+      "composition": "100% silk",
+      "similarity_score": 0.3799
+    }
+  ]
+}
+```
+
+The similarity score represents how closely the system considers the fabric descriptions to be related based on their semantic embeddings.
+
+### ML API Endpoint
+
+The backend exposes a similarity recommendation endpoint:
+
+```text
+GET /fabrics/{fabric_id}/similar
+```
+
+For example:
+
+```text
+GET /fabrics/3/similar
+```
+
+The endpoint returns the selected fabric and a ranked list of similar fabrics.
+
+### Frontend Integration
+
+The ML recommendation functionality is also integrated into the fabric catalogue interface.
+
+The frontend:
+
+1. Displays the available fabrics.
+2. Allows the user to select a fabric.
+3. Sends a request to the similarity API.
+4. Receives the ML recommendations.
+5. Displays recommended fabrics and their similarity scores.
+
+The frontend ML functionality is implemented in:
+
+```text
+frontend/js/ml.js
+```
+
+The recommendation interface is integrated into:
+
+```text
+frontend/fabric-catalog.html
+```
+
+## Running It Locally
 
 ### 1. Backend
+
 ```bash
 cd backend
 pip install -r requirements.txt
-alembic upgrade head         # applies database migrations
-python seed.py                # creates fabrics.db with sample data (run once)
-uvicorn main:app --reload     # starts the API at http://127.0.0.1:8000
+alembic upgrade head
+python seed.py
+uvicorn main:app --reload
 ```
 
-Interactive API docs: http://127.0.0.1:8000/docs
+The API will normally start at:
+
+```text
+http://127.0.0.1:8000
+```
+
+Interactive API documentation:
+
+```text
+http://127.0.0.1:8000/docs
+```
 
 ### 2. Frontend
-Just open `frontend/fabric-catalog.html` in a browser. By default it points
-at the live Render deployment — edit the `API_BASE` constant near the top of
-the `<script>` block to point at `http://127.0.0.1:8000` instead if you want
-to test against your local backend.
 
-Click **Staff login** in the top right to sign in and unlock add/edit/delete
-actions. Check `backend/seed.py` for the seeded test account credentials.
+Open:
 
-### 3. Running tests
+```text
+frontend/fabric-catalog.html
+```
+
+in a browser.
+
+For local development, the frontend can also be served using Python's built-in HTTP server:
+
 ```bash
-cd backend      # or repo root — pytest resolves paths via tests/conftest.py
+cd frontend
+python -m http.server 8000
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8000/fabric-catalog.html
+```
+
+The frontend communicates with the FastAPI backend through the configured API base URL.
+
+### 3. Machine Learning Dependencies
+
+The ML functionality requires the dependencies listed in:
+
+```text
+backend/requirements.txt
+```
+
+The important ML dependencies are:
+
+```text
+sentence-transformers==3.2.1
+scikit-learn==1.3.2
+```
+
+The first execution of the Sentence Transformer model may require downloading the pretrained model.
+
+### 4. Running Tests
+
+```bash
+cd backend
 pytest tests/ -v
 ```
 
 ## Features
 
-- Full CRUD for fabrics (create, view, edit, delete)
-- Search by name, SKU, supplier, or composition
-- Filter by category, sort by name/price/stock/date added
-- Low-stock flagging (below 20m)
-- Live dashboard stats (total fabrics, total stock, categories)
-- **Staff authentication** — JWT-based login required to create or edit
-  fabrics
-- **Role-based permissions** — only `admin`-role accounts can delete
-  fabrics or suppliers; `staff`-role accounts can view, add, and edit
-- **Fabric photos** — upload a swatch photo per fabric; displayed as a
-  thumbnail in the catalog grid and detail view (falls back to a solid
-  color block from the fabric's hex color when no photo is set)
-- **QR codes** — generate a scannable QR code per fabric encoding its name,
-  SKU, category, composition, and supplier; downloadable for printing and
-  attaching to a physical roll
-- **Supplier management** — a dedicated Supplier entity (name, contact
-  email, phone) that fabrics can be linked to via a dropdown; deleting a
-  supplier safely unlinks any fabrics pointing at it rather than breaking
-  them
-- **Automated tests + CI** — 26 tests covering CRUD, auth, permissions,
-  image upload, supplier management, and QR generation, run on every push
-- **Live deployment** — backend hosted on Render, auto-deploys from `main`
+### Fabric Management
 
-## Deployment notes
+* Full CRUD for fabrics
+* Add new fabric records
+* View fabric details
+* Edit fabric information
+* Delete fabrics
+* Search by name, SKU, supplier, or composition
+* Filter by category
+* Sort by name, price, stock, or date added
+* Low-stock detection below 20 metres
+* Dashboard statistics
 
-The live deployment runs on Render's free tier, which uses **non-persistent
-storage** — the SQLite database and any uploaded images reset when the
-server restarts or spins down after inactivity. This is an accepted,
-disclosed limitation of the free-tier demo deployment, not a defect in the
-system. A production deployment would use a managed database (e.g. hosted
-PostgreSQL) and dedicated file storage instead.
+### Authentication and Authorization
 
-## Status / next steps
+* Staff authentication
+* JWT-based login
+* Password hashing
+* Role-based access control
+* `admin` and `staff` roles
+* Only administrators can delete fabrics and suppliers
+* Staff users can view, add, and edit fabric records
 
-See `PROGRESS.md` for the development log and `docs/` for architecture notes.
+### Fabric Images
 
-Optional future work (not required for current scope): supplier-level
-reporting (e.g. total stock value by supplier), point-of-sale integration,
-multi-location stock sync, automated frontend tests.
+* Upload fabric/swatches images
+* Supported image formats include JPG, JPEG, PNG, WebP, and GIF
+* Uploaded images are stored and served through the backend
+* Fabric cards display uploaded images
+* Fabric colour is used as a fallback when an image is unavailable
+
+### QR Codes
+
+* Generate QR codes for individual fabrics
+* QR codes contain fabric information including:
+
+  * Name
+  * SKU
+  * Category
+  * Composition
+  * Supplier
+* QR codes can be generated on demand for physical fabric rolls
+
+### Supplier Management
+
+* Create suppliers
+* View suppliers
+* Edit supplier information
+* Delete suppliers
+* Link fabrics with suppliers
+* Safely unlink fabrics when a supplier is deleted
+
+### Machine Learning Recommendations
+
+* Semantic fabric similarity analysis
+* Automatic fabric recommendations
+* Sentence Transformer embeddings
+* `all-MiniLM-L6-v2` pretrained model
+* Similarity scoring
+* Ranked recommended fabrics
+* ML recommendation API endpoint
+* Frontend recommendation interface
+* Uses existing fabric catalogue data rather than requiring a separate recommendation dataset
+
+### Automated Testing and CI
+
+* Automated backend tests
+* API testing using FastAPI TestClient
+* Authentication and authorization testing
+* CRUD testing
+* Image upload testing
+* Supplier management testing
+* QR code generation testing
+* GitHub Actions CI
+* Dependency validation during CI
+
+### Live Deployment
+
+* Backend hosted on Render
+* Automatic deployment from the `main` branch
+* Public API documentation available through the deployed FastAPI `/docs` endpoint
+
+## API Overview
+
+Important API endpoints include:
+
+```text
+POST   /auth/login
+GET    /auth/me
+
+GET    /fabrics
+POST   /fabrics
+GET    /fabrics/{fabric_id}
+PATCH  /fabrics/{fabric_id}
+DELETE /fabrics/{fabric_id}
+
+POST   /fabrics/{fabric_id}/image
+GET    /fabrics/{fabric_id}/qrcode
+GET    /fabrics/{fabric_id}/similar
+
+GET    /suppliers
+POST   /suppliers
+GET    /suppliers/{supplier_id}
+PATCH  /suppliers/{supplier_id}
+DELETE /suppliers/{supplier_id}
+
+GET    /stats
+```
+
+## Deployment Notes
+
+The live deployment runs on Render's free tier, which uses **non-persistent storage**. The SQLite database and uploaded images can reset when the server restarts or spins down after inactivity.
+
+This is an accepted and disclosed limitation of the free-tier demonstration deployment rather than a defect in the application.
+
+For a production deployment, the system could use a managed database such as PostgreSQL together with dedicated persistent file storage.
+
+## Current Status
+
+The core Selvage system has been implemented with:
+
+* Fabric inventory and catalog management
+* Supplier management
+* Authentication and role-based authorization
+* Fabric image uploads
+* QR code generation
+* Dashboard statistics
+* Search and filtering
+* Low-stock monitoring
+* Machine Learning-based fabric similarity recommendations
+* Frontend ML recommendation interface
+* REST API integration
+* Automated backend testing
+* GitHub Actions CI
+* Render deployment
+
+The Machine Learning component extends the original catalogue system by providing an intelligent way to discover related fabrics based on the semantic similarity of their recorded characteristics.
+
+## Future Improvements
+
+Potential future improvements include:
+
+* Supplier-level reporting and analytics
+* More advanced fabric recommendation models
+* Recommendation evaluation using user feedback
+* Larger and more diverse fabric datasets
+* Recommendation history
+* Advanced inventory forecasting
+* Point-of-sale integration
+* Multi-location stock synchronization
+* Automated frontend testing
+* Persistent production database and file storage
+* Model fine-tuning using domain-specific fabric datasets
+* Recommendation performance evaluation using metrics such as Precision@K and Recall@K
