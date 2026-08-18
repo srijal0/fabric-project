@@ -3,6 +3,19 @@
 All notable changes to this project are documented in this file.
 
 ## [Unreleased]
+### Added — Machine Learning Fabric Recommendations
+
+* Added a Machine Learning-based fabric similarity recommendation feature.
+* Added `backend/ml/fabric_similarity.py` for calculating semantic similarity between fabric records.
+* Integrated the `all-MiniLM-L6-v2` Sentence Transformer model to generate embeddings from fabric information.
+* Added Scikit-learn similarity calculations to compare fabric embeddings and rank recommendations.
+* Added the `GET /fabrics/{fabric_id}/similar` API endpoint for retrieving similar fabrics.
+* Added frontend ML recommendation functionality in `frontend/js/ml.js`.
+* Integrated the recommendation interface into `frontend/fabric-catalog.html`.
+* Added similarity scores to recommended fabric results.
+* Added required ML dependencies, including `sentence-transformers==3.2.1` and `scikit-learn==1.3.2`.
+* Added documentation describing the ML recommendation workflow, API endpoint, frontend integration, and setup requirements.
+
 
 ### Documentation
 
