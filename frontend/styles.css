@@ -236,3 +236,151 @@ label{font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppe
   .form-row{grid-template-columns:1fr;}
   .header-right{width:100%;justify-content:space-between;}
 }
+
+/* ============================================================
+   ML Similar Fabric Recommendations
+   ============================================================ */
+
+.similar-fabrics {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px dashed var(--line);
+}
+
+.similar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.similar-header h3 {
+    margin: 0 0 5px;
+    font-family: 'Fraunces', serif;
+    font-size: 20px;
+}
+
+.similar-header p {
+    margin: 0;
+    font-size: 12px;
+    opacity: 0.65;
+    line-height: 1.5;
+}
+
+.ml-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: rgba(59, 75, 107, 0.15);
+    color: var(--indigo);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+}
+
+.similar-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.similar-card {
+    background: var(--bone);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 12px;
+    cursor: pointer;
+    transition: transform .12s ease, box-shadow .12s ease;
+}
+
+.similar-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 14px rgba(43, 38, 32, 0.12);
+}
+
+.similar-card-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.similar-card h4 {
+    margin: 0 0 3px;
+    font-family: 'Fraunces', serif;
+    font-size: 15px;
+}
+
+.similar-sku {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    opacity: 0.6;
+}
+
+.similar-score {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--indigo);
+    white-space: nowrap;
+}
+
+.similar-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: 10px;
+    font-size: 11px;
+}
+
+.similar-info span:first-child {
+    font-weight: 600;
+}
+
+.similar-info span:last-child {
+    opacity: 0.65;
+}
+
+.similar-score-bar {
+    height: 5px;
+    background: var(--bone-2);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 10px;
+}
+
+.similar-score-fill {
+    height: 100%;
+    background: var(--indigo);
+    border-radius: 10px;
+    transition: width .3s ease;
+}
+
+.similar-score-label {
+    margin-top: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    opacity: 0.6;
+}
+
+.similar-loading,
+.similar-error,
+.similar-empty {
+    padding: 14px;
+    border: 1px dashed var(--line);
+    border-radius: 6px;
+    font-size: 12px;
+    opacity: 0.7;
+    text-align: center;
+}
+
+.similar-error {
+    color: var(--rust);
+}
+
+@media (max-width: 600px) {
+    .similar-grid {
+        grid-template-columns: 1fr;
+    }
+}
