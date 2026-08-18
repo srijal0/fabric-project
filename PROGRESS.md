@@ -53,6 +53,7 @@ defense, and helps you remember what you did and why.
 - Barcode/QR generation per fabric roll.
 - Supplier management as its own entity.
 
+
 # QR codes, supplier management, and a second schema lesson applied
 - Added a `/fabrics/{id}/qrcode` endpoint generating a scannable QR code
   (name, SKU, category, composition, supplier) on demand, downloadable from
@@ -78,9 +79,50 @@ defense, and helps you remember what you did and why.
   Full suite: 26 tests passing, CI green.
 - Updated README and this log to reflect the finished feature set.
 
+# Machine Learning Fabric Similarity Recommendations
+
+* Added a Machine Learning-based fabric similarity recommendation feature to the Selvage system.
+* Created `backend/ml/fabric_similarity.py` to calculate similarity between fabric records.
+* Integrated the `all-MiniLM-L6-v2` Sentence Transformer model to generate semantic embeddings from fabric attributes.
+* Combined fabric information such as name, category, composition, colour, pattern, weight/GSM, width, season, usage, and care instructions into a descriptive representation for the ML model.
+* Added Scikit-learn similarity calculations to compare fabric embeddings and rank similar fabrics.
+* Added the `GET /fabrics/{fabric_id}/similar` API endpoint for retrieving ranked similar fabric recommendations.
+* Added frontend ML functionality in `frontend/js/ml.js`.
+* Integrated the recommendation interface into `frontend/fabric-catalog.html`.
+* Added similarity scores to the recommended fabric results.
+* Added ML dependencies to `backend/requirements.txt`, including `sentence-transformers==3.2.1` and `scikit-learn==1.3.2`.
+* Tested the ML module successfully and verified that the similarity API returns recommendations for existing fabric records.
+* Fixed the GitHub Actions dependency installation issue caused by an invalid comment in `requirements.txt`.
+* Updated the README and CHANGELOG to document the ML architecture, API endpoint, dependencies, frontend integration, and recommendation workflow.
+
+## Current Status
+
+* Core fabric catalogue and inventory management are implemented.
+* JWT authentication and role-based permissions are implemented.
+* Fabric image upload is implemented.
+* Supplier management is implemented.
+* QR code generation is implemented.
+* Analytics functionality is implemented.
+* Machine Learning-based fabric similarity recommendations are implemented.
+* Frontend ML recommendation interface is integrated.
+* REST API integration is working.
+* Backend automated tests and GitHub Actions CI are configured.
+* The project is deployed on Render.
+* README and CHANGELOG documentation have been updated.
+* The remaining work is focused on final regression checking, deployment verification, and thesis presentation/viva preparation.
+
+## Next
+
+* Perform a final regression check on the deployed application.
+* Verify the ML recommendation feature on the deployed system.
+* Confirm GitHub Actions CI is passing after the ML dependency changes.
+* Prepare the final thesis documentation.
+* Prepare for the final presentation and viva.
+
+
 ## Next
 - Final regression check on the live deployment before submission.
-- Exam, presentation, and viva prep — due August 16, 2026.
+- Exam, presentation, and viva prep — due August 20, 2026.
 
 ## Current Status
 
